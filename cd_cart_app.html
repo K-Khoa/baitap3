@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>CD Cart</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 40px;
+    background: #ffffff;
+    color: #222;
+  }
+  .page {
+    max-width: 760px;
+  }
+  h1 {
+    color: #17817a;
+    font-size: 34px;
+    margin: 0 0 24px 0;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  th, td {
+    border: 1px solid #444;
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 16px;
+    vertical-align: middle;
+  }
+  th {
+    background: #fff;
+    font-weight: bold;
+  }
+  td.price, td.amount {
+    white-space: nowrap;
+  }
+  td.action {
+    text-align: center;
+    width: 140px;
+  }
+  td.qty-cell {
+    white-space: nowrap;
+    width: 150px;
+  }
+  .qty-input {
+    width: 45px;
+    font-size: 15px;
+    padding: 4px;
+    margin-right: 6px;
+  }
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 5px 10px;
+    background: #efefef;
+    border: 1px solid #999;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #e0e0e0;
+  }
+  button:active {
+    background: #d5d5d5;
+  }
+  .cart-note {
+    font-size: 16px;
+    margin: 10px 0 24px 0;
+  }
+  .cart-actions button {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .empty-msg {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+  .hidden {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- CD LIST VIEW -->
+  <div id="listView">
+    <h1>CD list</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Price</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="cdTableBody">
+        <!-- rows injected by JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CART VIEW -->
+  <div id="cartView" class="hidden">
+    <h1>Your cart</h1>
+    <div id="cartTableWrap">
+      <!-- table injected by JS -->
+    </div>
+    <p class="cart-note"><strong>To change the quantity</strong>, enter the new quantity and click on the Update button.</p>
+    <div class="cart-actions">
+      <button id="continueShoppingBtn">Continue Shopping</button>
+      <button id="checkoutBtn">Checkout</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ---- data ----
+  const cdData = [
+    { id: 'cd1', name: '86 (the band) - True Life Songs and Pictures', price: 14.95 },
+    { id: 'cd2', name: 'Paddlefoot - The first CD', price: 12.95 },
+    { id: 'cd3', name: 'Paddlefoot - The second CD', price: 14.95 },
+    { id: 'cd4', name: 'Joe Rut - Genuine Wood Grained Finish', price: 14.95 }
+  ];
+
+  // cart: { id: { name, price, qty } }
+  let cart = {};
+
+  const listView = document.getElementById('listView');
+  const cartView = document.getElementById('cartView');
+  const cdTableBody = document.getElementById('cdTableBody');
+  const cartTableWrap = document.getElementById('cartTableWrap');
+
+  function money(n) {
+    return '$' + n.toFixed(2);
+  }
+  function moneyCart(n) {
+    return '\u00A4' + n.toFixed(2); // matches the site's cart currency glyph
+  }
+
+  function renderList() {
+    cdTableBody.innerHTML = cdData.map(cd => `
+      <tr>
+        <td>${cd.name}</td>
+        <td class="price">${money(cd.price)}</td>
+        <td class="action"><button class="add-btn" data-id="${cd.id}">Add To Cart</button></td>
+      </tr>
+    `).join('');
+
+    cdTableBody.querySelectorAll('.add-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        addToCart(btn.getAttribute('data-id'));
+      });
+    });
+  }
+
+  function addToCart(id) {
+    const cd = cdData.find(c => c.id === id);
+    if (!cd) return;
+    if (cart[id]) {
+      cart[id].qty += 1;
+    } else {
+      cart[id] = { name: cd.name, price: cd.price, qty: 1 };
+    }
+    showCart();
+  }
+
+  function renderCart() {
+    const ids = Object.keys(cart);
+
+    if (ids.length === 0) {
+      cartTableWrap.innerHTML = `<p class="empty-msg">Your cart is empty.</p>`;
+      return;
+    }
+
+    const rows = ids.map(id => {
+      const item = cart[id];
+      const amount = item.price * item.qty;
+      return `
+        <tr>
+          <td class="qty-cell">
+            <input type="text" class="qty-input" data-id="${id}" value="${item.qty}">
+            <button class="update-btn" data-id="${id}">Update</button>
+          </td>
+          <td>${item.name}</td>
+          <td class="price">${moneyCart(item.price)}</td>
+          <td class="amount">${moneyCart(amount)}</td>
+          <td class="action"><button class="remove-btn" data-id="${id}">Remove Item</button></td>
+        </tr>
+      `;
+    }).join('');
+
+    cartTableWrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Quantity</th>
+            <th>Description</th>
+            <th>Price</th>
+            <th>Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+
+    cartTableWrap.querySelectorAll('.update-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const input = cartTableWrap.querySelector(`.qty-input[data-id="${id}"]`);
+        const newQty = parseInt(input.value, 10);
+        if (isNaN(newQty) || newQty <= 0) {
+          delete cart[id];
+        } else {
+          cart[id].qty = newQty;
+        }
+        renderCart();
+      });
+    });
+
+    cartTableWrap.querySelectorAll('.remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        delete cart[id];
+        renderCart();
+      });
+    });
+  }
+
+  function showCart() {
+    renderCart();
+    listView.classList.add('hidden');
+    cartView.classList.remove('hidden');
+  }
+
+  function showList() {
+    cartView.classList.add('hidden');
+    listView.classList.remove('hidden');
+  }
+
+  document.getElementById('continueShoppingBtn').addEventListener('click', showList);
+  document.getElementById('checkoutBtn').addEventListener('click', () => {
+    alert('Checkout is not implemented in this demo.');
+  });
+
+  renderList();
+</script>
+
+</body>
+</html>
